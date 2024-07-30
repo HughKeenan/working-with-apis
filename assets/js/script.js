@@ -5,12 +5,28 @@ const resultsModal = new bootstrap.Modal(document.getElementById("resultsModal")
 document.getElementById("status").addEventListener("click", e => getStatus(e))
 document.getElementById("submit").addEventListener("click", e => postForm(e))
 
+//formats info being sent to API
+//iterates through values, pushes to a temporary array and then converts back to astring
+function processOptions(form){
+    let optArray = []
+
+    for (let entry of form.entries()){
+        if (entry[0] === "options"){
+            optArray.push(entry[1])
+        }
+    }
+
+    form.delete("options")
+    form.append("options", optArray.join())
+    return form
+}
+
 //POST method to get form data
 //reads form by getting id and the uses fetch method to post to API
 //converts response to json and displays it
 async function postForm(e) {
 
-    const form = new FormData(document.getElementById("checksform"));
+    const form = processOptions(new FormData(document.getElementById("checksform")));
 
     const response = await fetch(API_URL, {
         method: "POST",
@@ -24,11 +40,12 @@ async function postForm(e) {
     if (response.ok){
         displayErrors(data)
     }else{
+        displayException(data)
         throw new Error (data.error)
     }
 }
 
-//iterates through error list is one obtained on submitting to API
+//iterates through error list if one obtained on submitting to API
 function displayErrors(data){
     let heading = `JSHint results for ${data.file}`
     if (data.total_errors === 0){
@@ -55,6 +72,7 @@ async function getStatus(e){
     if (response.ok) {
         displayStatus(data)
     }else{
+        displayException(data)
         throw new Error(data.error)
     }
 }
@@ -64,6 +82,18 @@ function displayStatus(data){
     let heading = "API Key Status"
     let results = `<div>Your key is valid until </div>`
     results += `<div class = "key-status">${data.expiry}</div>`
+
+    document.getElementById("resultsModalTitle").innerText = heading
+    document.getElementById("results-content").innerHTML = results
+    resultsModal.show()
+}
+
+function displayException(data){
+    let heading = `An Exception Occurred`
+
+    results = `<div>The API returned status code ${data.status_code}</div>`
+    results += `<div>Error number: <strong>${data.error_no}</strong></div>`
+    results += `<div>Error text: <strong>${data.error}</strong></div>`
 
     document.getElementById("resultsModalTitle").innerText = heading
     document.getElementById("results-content").innerHTML = results
